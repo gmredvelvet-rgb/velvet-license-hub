@@ -8,12 +8,17 @@
  *
  * Public API, at `game.modules.get("velvet-license-hub").api`:
  *
- *   apiVersion        1. Consumers should require `>= 1` and treat anything
- *                     else as "no hub", falling back to their own licence.
- *   register(id)      Declare that module `id` is covered in this world.
- *                     Call from `ready`, before any `await`.
- *   isLicensed()      Whether this world is licensed right now.
- *   openLicenseCard() Show the hub's card, e.g. from a module's own menu.
+ *   apiVersion          2. Consumers require the version they need (`>= 1` to
+ *                       register, `>= 2` for the rest) and treat anything else
+ *                       as "no hub", falling back to their own licence.
+ *   register(id)        v1. Declare that module `id` consults the hub here.
+ *                       Call from `ready`, before any `await`.
+ *   openLicenseCard()   v1. Show the hub's card, e.g. from a module's own menu.
+ *   isLicensed(id?)     With an id: whether the verdict covers that module. With
+ *                       none: whether any verdict is in force (the v1 meaning).
+ *   hasVerdict()        v2. Whether the hub has ever licensed this world. Until
+ *                       it has, a module's own older flag still counts.
+ *   request(m, path, b) v2. Authenticated call to the licence server, GM only.
  *
  * Everything is wrapped in try/catch: the soft gate's golden rule is that no
  * feature is ever blocked, and that includes a failure in the licence layer
@@ -23,13 +28,13 @@
 import { MODULE_ID, MODULE_TITLE } from "./constants.js";
 import LicenseClient from "./license.js";
 import LicenseUI, { licenseMenuClass, openLicenseCard } from "./license-ui.js";
-import { SETTING, isWorldLicensed } from "./world.js";
+import { SETTING, isWorldLicensed, hasVerdict } from "./world.js";
 import { register } from "./registry.js";
 
 Hooks.once("init", () => {
   try {
     game.settings.register(MODULE_ID, SETTING, {
-      scope: "world", config: false, type: Number, default: 0
+      scope: "world", config: false, type: Object, default: { until: 0, modules: [] }
     });
     game.settings.registerMenu(MODULE_ID, "licenseMenu", {
       name:  `${MODULE_ID}.Settings.License.Name`,
@@ -41,10 +46,12 @@ Hooks.once("init", () => {
     });
     // Published in init so it exists before any module's `ready` hook runs.
     game.modules.get(MODULE_ID).api = Object.freeze({
-      apiVersion: 1,
+      apiVersion: 2,
       register,
+      openLicenseCard,
       isLicensed: isWorldLicensed,
-      openLicenseCard
+      hasVerdict,
+      request: (method, path, body) => LicenseClient.instance.request(method, path, body)
     });
   }
   catch ( error ) {
@@ -68,7 +75,10 @@ Hooks.once("ready", async () => {
       // Same browser, another world: the credentials are already here, so the
       // world is licensed on the spot — no card, no second connection.
       if ( licensed ) await client.publishWorldLicence();
-      else if ( !client.hasStoredCredentials && !isWorldLicensed() ) LicenseUI.show();
+      // Without credentials there is nobody to renew the verdict from here, so a
+      // module still on trial gets the card now. With them, the reminder is
+      // enough — it is the $3 case, and that GM has already connected.
+      if ( !client.hasStoredCredentials && LicenseUI.hasTrialModules() ) LicenseUI.show();
     }
     // Players only ever read the world's date; they never contact the server.
     LicenseUI.startReminder();
@@ -81,6 +91,6 @@ Hooks.once("ready", async () => {
 // Activating mid-session silences the reminder on every client, no reload.
 Hooks.on("updateSetting", setting => {
   if ( setting.key !== `${MODULE_ID}.${SETTING}` ) return;
-  if ( isWorldLicensed() ) LicenseUI.stopReminder();
-  else LicenseUI.startReminder();
+  if ( LicenseUI.hasTrialModules() ) LicenseUI.startReminder();
+  else LicenseUI.stopReminder();
 });

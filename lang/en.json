@@ -30,7 +30,9 @@
       "Released": "Installation slot released.",
       "Release": "Release installation",
       "ReleaseHint": "Release the slot if you are moving your subscription to another browser or computer.",
-      "ReleaseConfirm": "Release this installation? The modules keep working, but the free-trial reminder returns in this world until you connect again."
+      "ReleaseConfirm": "Release this installation? The modules keep working, but the free-trial reminder returns in this world until you connect again.",
+      "TrialPartial": "Your Patreon subscription covers some of your modules. These are still on the free trial, with every feature available:",
+      "TrialPitchUpgrade": "Your tier does not include them. If you upgrade, connect again and they are activated at once."
     }
   }
 }

@@ -1,13 +1,16 @@
 /**
  * The modules that consult the hub in this world.
  *
- * Covered modules call `api.register(moduleId)` from their own `ready` hook.
- * The hub uses the list for two things: naming what the licence covers on its
- * card, and staying quiet altogether in a world where no covered module is
- * active — there is no trial there to remind anyone of.
+ * Modules call `api.register(moduleId)` from their own `ready` hook. The hub
+ * uses the list to name, on its card, what is licensed and what is still on
+ * trial — and to stay quiet altogether in a world where nothing registered is
+ * left on trial.
+ *
+ * Registered is not the same as licensed: a $3 patron's world registers every
+ * module, while the licence covers only velvet-mobile (see world.js).
  */
 
-const covered = new Set();
+const registered = new Set();
 
 /**
  * @param {string} moduleId  The caller's own id, exactly as in its manifest.
@@ -15,16 +18,16 @@ const covered = new Set();
  */
 export function register(moduleId) {
   if ( typeof moduleId !== "string" ) return false;
-  // Only modules that are really running here: the list is shown to the GM as
-  // "what this licence covers", so it must not name anything that is not.
+  // Only modules that are really running here: the card shows this list to the
+  // GM, so it must not name anything that is not.
   if ( !game.modules.get(moduleId)?.active ) return false;
-  covered.add(moduleId);
+  registered.add(moduleId);
   return true;
 }
 
 /** @returns {{id: string, title: string}[]} Sorted by title. */
-export function coveredModules() {
-  return [...covered]
+export function registeredModules() {
+  return [...registered]
     .map(id => ({ id, title: game.modules.get(id)?.title ?? id }))
     .sort((a, b) => a.title.localeCompare(b.title));
 }

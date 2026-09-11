@@ -30,7 +30,9 @@
       "Released": "Plaza de instalación liberada.",
       "Release": "Liberar instalación",
       "ReleaseHint": "Libera la plaza si vas a usar tu suscripción desde otro navegador u ordenador.",
-      "ReleaseConfirm": "¿Liberar esta instalación? Los módulos siguen funcionando, pero en este mundo vuelve el recordatorio de prueba gratuita hasta que conectes de nuevo."
+      "ReleaseConfirm": "¿Liberar esta instalación? Los módulos siguen funcionando, pero en este mundo vuelve el recordatorio de prueba gratuita hasta que conectes de nuevo.",
+      "TrialPartial": "Tu suscripción de Patreon cubre parte de tus módulos. Estos siguen en prueba gratuita, con todas sus funciones disponibles:",
+      "TrialPitchUpgrade": "Tu tier no los incluye. Si mejoras la suscripción, vuelve a conectar y se activan al momento."
     }
   }
 }

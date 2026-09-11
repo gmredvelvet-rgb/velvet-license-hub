@@ -11,21 +11,23 @@
  *     reference hashed the world id, and localStorage is shared by every world
  *     on a server — so a second world revoked the credentials at its first
  *     refresh. A hub exists to be connected once; that could not stand.
- *  3. The world flag is a date (`licensedUntil`), not a boolean. A boolean was
- *     sticky: once true, only the browser holding the tokens could ever turn it
- *     back off. A date lapses on its own when nobody re-verifies it, and needs
- *     no failure path to clear it.
+ *  3. The world licence is a date plus the modules it covers (`worldLicence`),
+ *     not a boolean. A boolean was sticky: once true, only the browser holding
+ *     the tokens could ever turn it back off. A date lapses on its own when
+ *     nobody re-verifies it, and needs no failure path to clear it. The list is
+ *     what lets a $3 patron be licensed for velvet-mobile and nothing else.
  *
- * Credentials never leave this browser's localStorage. Only the date reaches
- * the world, because world settings are sent to every player — and the access
- * token is a bearer credential that also spends the owner's AI Studio quota.
+ * Credentials never leave this browser's localStorage. Only the date and the
+ * list reach the world, because world settings are sent to every player — and
+ * the access token is a bearer credential that also spends the owner's AI
+ * Studio quota. Covered modules that need the server go through `request()`.
  *
  * Nothing here may ever block functionality: an unlicensed world keeps every
  * feature and only receives a periodic trial reminder.
  */
 
 import { MODULE_ID, MODULE_TITLE, localize } from "./constants.js";
-import { SETTING, worldLicensedUntil } from "./world.js";
+import { SETTING, worldLicence } from "./world.js";
 
 const API_BASE = "https://vnd-license.gmredvelvet.workers.dev";
 
@@ -73,7 +75,7 @@ const GRACE_MS = 5 * 60 * 1000;
 const TRUST_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * Only push the world's `licensedUntil` forward when it gains at least this
+ * Only push the world licence's date forward when it gains at least this
  * much. Every heartbeat renews the trust window, and every world-setting write
  * broadcasts `updateSetting` to all connected clients — for a date thirty days
  * out, once a day is plenty.
@@ -125,12 +127,24 @@ export default class LicenseClient {
   /*  Public surface                              */
   /* -------------------------------------------- */
 
+  /** @type {Promise<boolean>|null} */
+  #initPromise = null;
+
   /**
    * Restore a stored licence, refreshing the token when needed.
+   *
+   * Memoised: the hub's ready hook calls it, and so does the first `request()`
+   * from a covered module — which can easily arrive first. Two runs would load
+   * the tokens twice and could fire two refreshes of the same token.
    * @returns {Promise<boolean>} Whether this world may be treated as licensed —
    * either verified right now, or still inside its 30-day trust window.
    */
-  async initialize() {
+  initialize() {
+    this.#initPromise ??= this.#initialize();
+    return this.#initPromise;
+  }
+
+  async #initialize() {
     this.#installationId = this.#getOrCreateInstallationId();
     this.#fingerprint = await this.#computeFingerprint();
     this.#loadStoredTokens();
@@ -215,17 +229,79 @@ export default class LicenseClient {
   }
 
   /**
+   * The module ids this browser's live verification covers, as the server put
+   * them in the token (`module:<id>` features). Empty without a live token.
+   * @returns {string[]}
+   */
+  get coveredModules() {
+    return this.#features
+      .filter(f => typeof f === "string" && f.startsWith("module:"))
+      .map(f => f.slice("module:".length));
+  }
+
+  /**
    * Carry this browser's verification into the world, so players and every
    * covered module reach the same verdict without contacting the server.
    *
-   * Never shortens the date: another GM browser may have pushed it further.
-   * A no-op for players, for a browser with nothing to vouch for, and when the
-   * gain would be under PUBLISH_STEP_MS.
+   * Writes when the date would gain at least PUBLISH_STEP_MS, or when the list
+   * of covered modules changed — an upgrade or downgrade must reach the world on
+   * the next beat, not a day later. The date is never shortened: another GM
+   * browser may have pushed it further.
    */
   async publishWorldLicence() {
     if ( !game.user?.isGM || !this.isTrusted ) return;
-    if ( (this.#verifiedUntil - worldLicensedUntil()) < PUBLISH_STEP_MS ) return;
-    await this.#writeWorldLicence(this.#verifiedUntil);
+    // Only a live verification knows what the tier covers. A browser coasting on
+    // its trust window without a token has an empty list, and publishing that
+    // would strip the world of modules it is still entitled to.
+    const modules = this.coveredModules;
+    if ( !modules.length ) return;
+    const current = worldLicence();
+    const gains = (this.#verifiedUntil - current.until) >= PUBLISH_STEP_MS;
+    const changed = (modules.length !== current.modules.length)
+      || modules.some(id => !current.modules.includes(id));
+    if ( !gains && !changed ) return;
+    await this.#writeWorldLicence({ until: Math.max(this.#verifiedUntil, current.until), modules });
+  }
+
+  /**
+   * Authenticated call to the licence server on behalf of a covered module — the
+   * shop catalogue, AI Studio. The hub's token carries the features of the whole
+   * catalogue for its tier, so this one token passes every route's check.
+   *
+   * The token itself is never handed out (see the file header). Only a GM
+   * browser holding credentials can do this; anywhere else it throws
+   * `NO_CREDENTIALS` without touching the network.
+   * @param {"GET"|"POST"} method
+   * @param {string} path  Worker path, e.g. "/shops/data".
+   * @param {object} [body] JSON body, POST only.
+   * @returns {Promise<object>} The payload, signature-verified when signed.
+   */
+  async request(method, path, body = null) {
+    if ( !["GET", "POST"].includes(method) ) throw new LicenseError(`Unsupported method ${method}`, "BAD_REQUEST");
+    // The path is appended to API_BASE, so anything but a plain path could turn
+    // the URL into another host — "@evil.example/x" reads as userinfo — and
+    // carry the bearer token there. Plain segments only.
+    if ( (typeof path !== "string") || !/^\/[A-Za-z0-9_\-/]+$/.test(path) ) {
+      throw new LicenseError("Invalid licence server path", "BAD_REQUEST");
+    }
+    if ( !game.user?.isGM ) throw new LicenseError("Only the GM's browser holds licence credentials", "NO_CREDENTIALS");
+    await this.initialize();
+    if ( !this.#refreshToken && !this.#isAccessTokenValid() ) {
+      throw new LicenseError("No licence credentials in this browser", "NO_CREDENTIALS");
+    }
+    if ( !this.#isAccessTokenValid() ) await this.#refresh();
+
+    const send = () => this.#apiCall(path, method === "POST" ? (body ?? {}) : null, { method, nonce: false });
+    try {
+      return await send();
+    }
+    catch ( err ) {
+      // The server can expire or revoke an access token before our clock says
+      // so. One refresh and one retry; anything beyond that is a real verdict.
+      if ( !["TOKEN_EXPIRED", "INVALID_TOKEN"].includes(err.code) || !this.#refreshToken ) throw err;
+      await this.#refresh();
+      return send();
+    }
   }
 
   /**
@@ -311,7 +387,7 @@ export default class LicenseClient {
       this.#stopHeartbeat();
       // Only this world can be reached from here. Other worlds keep the date
       // they were given and lapse on their own within the trust window.
-      await this.#writeWorldLicence(0);
+      await this.#writeWorldLicence({ until: 0, modules: [] });
       ui.notifications?.info(`${MODULE_TITLE}: ${L("Released")}`);
       return true;
     }
@@ -471,11 +547,11 @@ export default class LicenseClient {
     return ["NETWORK_ERROR", "INTERNAL_ERROR", "RATE_LIMITED", "NOT_FOUND", "API_ERROR"].includes(err.code);
   }
 
-  /** @param {number} until Epoch ms; 0 clears the world licence. */
-  async #writeWorldLicence(until) {
+  /** @param {{until: number, modules: string[]}} licence  `until: 0` clears it. */
+  async #writeWorldLicence(licence) {
     if ( !game.user?.isGM ) return;
     try {
-      await game.settings.set(MODULE_ID, SETTING, until);
+      await game.settings.set(MODULE_ID, SETTING, licence);
     }
     catch ( err ) {
       console.warn(`${MODULE_TITLE} | Could not persist the world licence`, err);
@@ -513,18 +589,25 @@ export default class LicenseClient {
   /**
    * @param {string} endpoint
    * @param {object|null} body
+   * @param {object} [options]
+   * @param {"GET"|"POST"} [options.method]
+   * @param {boolean} [options.nonce]  Stamp nonce + timestamp into the body. The
+   *   licence routes require it (anti-replay); content routes such as /shops/data
+   *   and /ai/* do not, and a GET has no body to carry it.
    * @returns {Promise<object>}
    */
-  async #apiCall(endpoint, body) {
+  async #apiCall(endpoint, body, { method = "POST", nonce = true } = {}) {
     const init = {
-      method: "POST",
+      method,
       headers: {
         "Content-Type": "application/json",
         "X-Installation-ID": this.#installationId ?? ""
       }
     };
     if ( this.#accessToken ) init.headers.Authorization = `Bearer ${this.#accessToken}`;
-    if ( body ) init.body = JSON.stringify({ ...body, nonce: crypto.randomUUID(), timestamp: Date.now() });
+    if ( body ) {
+      init.body = JSON.stringify(nonce ? { ...body, nonce: crypto.randomUUID(), timestamp: Date.now() } : body);
+    }
 
     let response;
     try {

@@ -1,9 +1,9 @@
 /**
  * Velvet License Hub — the licence card and the free-trial reminder.
  *
- * One card for every covered module, instead of one per module. It names what
- * the licence covers in this world, and it never appears where no covered
- * module is active: with nothing on trial there is nothing to remind about.
+ * One card for every registered module, instead of one per module. It names
+ * what the licence covers in this world and what is still on trial, and it
+ * never nags where nothing is on trial.
  *
  * The card is a floating element rather than a DialogV2 because a dialog
  * closes the moment any button is pressed, so starting the Patreon flow would
@@ -14,7 +14,7 @@
 import { MODULE_ID, MODULE_TITLE } from "./constants.js";
 import LicenseClient, { L } from "./license.js";
 import { isWorldLicensed, worldLicensedUntil } from "./world.js";
-import { coveredModules } from "./registry.js";
+import { registeredModules } from "./registry.js";
 
 /** Single card at a time. */
 const CARD_ID = `${MODULE_ID}-card`;
@@ -48,29 +48,47 @@ export default class LicenseUI {
   static #hideTimer = null;
 
   /**
+   * Registered modules split by the world's verdict.
+   * @returns {{covered: object[], trial: object[]}}
+   */
+  static #split() {
+    const modules = registeredModules();
+    return {
+      covered: modules.filter(m => isWorldLicensed(m.id)),
+      trial: modules.filter(m => !isWorldLicensed(m.id))
+    };
+  }
+
+  /** @returns {boolean} Whether any registered module is still on trial. */
+  static hasTrialModules() {
+    return LicenseUI.#split().trial.length > 0;
+  }
+
+  /**
    * Show the licence card. Idempotent — calling it again leaves the existing
    * card alone rather than stacking a second one.
    * @param {object} [options]
    * @param {boolean} [options.autoHide]  Dismiss itself after AUTO_HIDE_MS.
-   * @param {boolean} [options.force]     Show even with no covered module active
-   *                                      (an explicit request from the settings menu).
+   * @param {boolean} [options.force]     Show even with nothing on trial (an
+   *                                      explicit request from a menu).
    */
   static show({ autoHide = false, force = false } = {}) {
     if ( document.getElementById(CARD_ID) ) return;
-    const modules = coveredModules();
-    if ( !modules.length && !force ) return;
+    const { covered, trial } = LicenseUI.#split();
+    if ( !trial.length && !force ) return;
 
-    const licensed = isWorldLicensed();
+    // With nothing registered (a forced open), the world-wide verdict decides.
+    const onTrial = trial.length > 0 || (!covered.length && !isWorldLicensed());
     // Only the GM can act on an unlicensed world, so only their card offers
     // the Patreon flow; players get the same notice with nothing to press.
     let markup;
-    if ( licensed ) markup = LicenseUI.#activeMarkup(modules);
-    else if ( game.user?.isGM ) markup = LicenseUI.#trialMarkupGM(modules);
-    else markup = LicenseUI.#trialMarkupPlayer(modules);
+    if ( !onTrial ) markup = LicenseUI.#activeMarkup(covered);
+    else if ( game.user?.isGM ) markup = LicenseUI.#trialMarkupGM(trial, covered);
+    else markup = LicenseUI.#trialMarkupPlayer(trial);
 
     const card = document.createElement("div");
     card.id = CARD_ID;
-    card.className = `vlh-license-card ${licensed ? "is-active" : "is-trial"}`;
+    card.className = `vlh-license-card ${onTrial ? "is-trial" : "is-active"}`;
     card.innerHTML = markup;
 
     card.addEventListener("click", event => {
@@ -102,14 +120,14 @@ export default class LicenseUI {
 
   /**
    * Start the periodic free-trial reminder. Safe to call repeatedly: it
-   * restarts a single timer. Licence and covered modules are re-read on every
-   * tick, so activating mid-session silences it without a reload.
+   * restarts a single timer. The verdict is re-read on every tick, so
+   * activating mid-session silences it without a reload.
    */
   static startReminder() {
     LicenseUI.#clearTimer();
-    if ( isWorldLicensed() ) return;
+    if ( !LicenseUI.hasTrialModules() ) return;
     LicenseUI.#reminderTimer = setInterval(() => {
-      if ( isWorldLicensed() ) return void LicenseUI.stopReminder();
+      if ( !LicenseUI.hasTrialModules() ) return void LicenseUI.stopReminder();
       LicenseUI.show({ autoHide: true });
     }, REMINDER_MS);
   }
@@ -151,12 +169,20 @@ export default class LicenseUI {
     return `<ul class="vlh-license-modules">${items}</ul>`;
   }
 
-  static #trialMarkupGM(modules) {
+  /**
+   * @param {object[]} trial    Registered modules the verdict does not cover.
+   * @param {object[]} covered  Registered modules it does — non-empty only when
+   *   the tier opens part of the catalogue ($3 opens velvet-mobile alone). That
+   *   GM has already connected; what they need to hear is that their tier stops
+   *   short, and that reconnecting after an upgrade applies it at once.
+   */
+  static #trialMarkupGM(trial, covered = []) {
+    const partial = covered.length > 0;
     return `
       ${LicenseUI.#header(L("TrialBadge"))}
-      <p class="vlh-license-status">${L("TrialIntro")}</p>
-      ${LicenseUI.#moduleList(modules)}
-      <p class="vlh-license-note">${L("TrialPitch")}</p>
+      <p class="vlh-license-status">${L(partial ? "TrialPartial" : "TrialIntro")}</p>
+      ${LicenseUI.#moduleList(trial)}
+      <p class="vlh-license-note">${L(partial ? "TrialPitchUpgrade" : "TrialPitch")}</p>
       <button type="button" data-action="connect" class="vlh-license-primary">
         <i class="fa-brands fa-patreon" aria-hidden="true"></i> ${L("Connect")}
       </button>

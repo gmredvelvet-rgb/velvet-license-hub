@@ -471,8 +471,23 @@ Backend: `verify-tiers.js` y `verify-security.js` en verde; `/oauth/start` y un
 | 4 Módulos soft | **hecho** | 2026-09-11 | 7 módulos + la parte soft de `vnd-enhanced`. Los overlays con candado de `pf2e-velvet-sheet` y `dnd-velvet-sheets` son código muerto (nadie los llama): fase 11 |
 | 5 Hard gates | **hecho** | 2026-09-11 | los 4. `sf2e-cyber-sheet` ponía su flag a `false` en `setup` si el navegador no validaba: con hub ya no lo toca (pisaría el flag que D3 necesita) |
 | 6 Contenido del worker | **hecho** | 2026-09-11 | `dnd-shops` no tiene flag de mundo: su D3 es "el cliente propio hasta que el hub hable". `vnd-enhanced` IA vía `hub.request`; `request()` admite ahora query plana (`/ai/history?limit=20`). `VNEnhanced.license`/`hasFeature` sin cambios: fase 11 |
-| 7 Los 15 del port | pendiente | | sin cambios de código |
+| 7 Los 15 del port | **hecho** | 2026-09-11 | sin cambios de código: usan `register()` de la API v1, que v2 mantiene (escenarios de `tests/integration.mjs`) |
 | 8 Dependencia obligatoria | pendiente | | |
 | 9 Verificación integral | pendiente | | |
 | 10 Releases ⛔ | pendiente | | |
 | 11 Limpieza | pendiente | | tras una release estable |
+
+**Commits de las fases 4-6** (rama `feat/license-hub`, sin push): `isometric-asset-palette`
+f5c7628 · `directional-token-images` 549b71f · `velvet-move` 4ceec40 ·
+`isometric-tokens-creator` 9697a0b · `pf2e-velvet-sheet` ed2686e · `dnd-velvet-sheets`
+ae7244c · `velvet-mobile` 0c89fdc · `hopefinder-sheet` 14e5eac · `sf2e-cyber-sheet`
+29149d2 · `starfinderdashboard` d1a6a8f · `dnd-shops` 123a024 · `vnd-enhanced` 0813b94.
+`velvet-journals` no tiene git: editado en su sitio, copia previa en el scratchpad.
+
+**Siguiente: fase 8, que espera a las paradas 1 y 3.** Estas carpetas son la
+instalación de Foundry del usuario: añadir `requires` en local obliga ya a activar el
+hub en sus mundos. Con el backend de producción sin la fase 1, el token del hub no trae
+cobertura (`module:*`), el hub nunca publica veredicto, y todos los módulos quedarían
+en prueba gratuita bajo la tarjeta del hub — sin perder acceso (D3), pero con aviso
+constante. Además, `hopefinder-sheet` y `dnd-velvet-sheets` tienen el `module.json`
+reescrito por Foundry: decidir con el usuario antes de tocarlo.

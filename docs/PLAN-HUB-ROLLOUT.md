@@ -475,7 +475,7 @@ Backend: `verify-tiers.js` y `verify-security.js` en verde; `/oauth/start` y un
 | 7 Los 15 del port | **hecho** | 2026-09-11 | sin cambios de código: usan `register()` de la API v1, que v2 mantiene (escenarios de `tests/integration.mjs`) |
 | 8 Dependencia obligatoria | **hecho** | 2026-09-11 | `requires` del hub en 27 módulos: los 13 publicados, `velvet-journals`, `action-bubbles` y 12 sin repo público (en local). **`tarokka` excluido**: su README promete que es gratis y sin licencia, y está en el listado oficial; su copia local se devolvió a la release v1.0.3 publicada |
 | 9 Verificación integral | **hecho, salvo Foundry real** | 2026-09-11 | cada manifiesto publicado sirve la versión nueva con el hub, y cada zip de descarga responde 200. Pendiente: instalar en un Foundry real (usuario) |
-| 10 Releases ⛔ | **en producción** | 2026-09-11 | vnd-enhanced 1.7.0 · dnd-shops 0.7.0 · sf2e-cyber-sheet 1.3.0 · starfinderdashboard 1.1.0 · hopefinder-sheet 1.2.0 · pf2e-velvet-sheet 1.4.0 · dnd-velvet-sheets 1.4.0 · velvet-mobile 0.21.0 · directional-token-images 1.2.0 · velvet-move 1.1.0 · isometric-tokens-creator 1.1.0 · isometric-asset-palette 0.5.0 · pf2e-statblock-parser 0.2.0 · velvet-journals 3.5.0 (incluye la API de alta de misiones que estaba sin subir) · action-bubbles 1.5.0 (repo privado) |
+| 10 Releases ⛔ | **en producción** | 2026-09-11 | vnd-enhanced 1.7.0 · dnd-shops 0.7.0 · sf2e-cyber-sheet 1.3.0 · starfinderdashboard 1.1.0 · hopefinder-sheet 1.2.0 · pf2e-velvet-sheet 1.4.0 · dnd-velvet-sheets 1.4.0 · velvet-mobile 0.21.0 · directional-token-images 1.2.0 · velvet-move 1.1.0 · isometric-tokens-creator 1.1.0 · isometric-asset-palette 0.5.0 · pf2e-statblock-parser 0.2.0 · velvet-journals 3.5.0 (incluye la API de alta de misiones que estaba sin subir) · action-bubbles 1.5.0 (repo privado) · velvet-shopping-experience 0.11.0 (soft gate nuevo; alta en backend `ca54238`) |
 | 11 Limpieza | pendiente | | tras una release estable |
 
 **Commits de las fases 4-6** (rama `feat/license-hub`, sin push): `isometric-asset-palette`
@@ -508,3 +508,12 @@ reescrito por Foundry: decidir con el usuario antes de tocarlo.
   no hay canal de distribución conocido desde aquí.
 - **`action-bubbles`**: publicada (1.5.0), pero el repo es privado, así que los usuarios
   no pueden instalarla por manifiesto. Así estaba ya antes.
+
+### Dónde desarrollar (aprendido el 2026-09-11)
+
+**No en `Data/modules/`.** Foundry reinstaló el hub desde su release y sustituyó la
+carpeta entera: se fueron `.git`, `docs/`, `tests/`, `bridge/` y `tools/`. No se perdió
+nada porque estaba subido, pero cualquier módulo actualizado desde Foundry corre la
+misma suerte con lo que no esté en su zip. Desarrollar en un clon aparte y dejar
+`Data/modules/` para lo instalado. Copia de lo que solo existía allí (docs de
+`vnd-enhanced` e `isometric-asset-palette`): `G:ackendespaldos-modulos6-09-11`.

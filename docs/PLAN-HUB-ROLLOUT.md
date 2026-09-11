@@ -306,8 +306,9 @@ Repo `I:\Foundry_Data\Data\modules\velvet-license-hub`:
    $3. Recordatorio si hay algún módulo registrado sin cubrir.
 4. `main.js`: API v2.
 5. `module.json`: `version 2.0.0`, `url`, `manifest`, `download` (patrón de
-   `isometric-asset-palette`), `.github/workflows/release.yml` copiado de
-   `isometric-asset-palette` cambiando el nombre.
+   `isometric-asset-palette`). Releases con `tools/release.sh <versión>`, no con un
+   workflow: el token de `gh` de esta máquina no tiene el scope `workflow` y GitHub
+   rechaza cualquier push que toque `.github/workflows`.
 6. README y CHANGELOG.
 
 **Verificación:** los arneses de la sección 6, escenarios H1-H9.

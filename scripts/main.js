@@ -12,7 +12,8 @@
  *                       register, `>= 2` for the rest) and treat anything else
  *                       as "no hub", falling back to their own licence.
  *   register(id)        v1. Declare that module `id` consults the hub here.
- *                       Call from `ready`, before any `await`.
+ *                       Call from `ready`, ideally before any `await`; a later
+ *                       call still gets the module into the card and reminder.
  *   openLicenseCard()   v1. Show the hub's card, e.g. from a module's own menu.
  *   isLicensed(id?)     With an id: whether the verdict covers that module. With
  *                       none: whether any verdict is in force (the v1 meaning).
@@ -31,6 +32,31 @@ import LicenseUI, { licenseMenuClass, openLicenseCard } from "./license-ui.js";
 import { SETTING, isWorldLicensed, hasVerdict } from "./world.js";
 import { register } from "./registry.js";
 
+/** Set once the hub's own ready pass has decided what to show. */
+let settled = false;
+
+/**
+ * `register` as the API exposes it. A module that registers after the hub's
+ * ready pass — because it awaited something first — would otherwise never be
+ * reminded about: the reminder is only scheduled when something is on trial,
+ * and at that point it was not there yet.
+ * @param {string} moduleId
+ * @returns {boolean}
+ */
+function registerModule(moduleId) {
+  const accepted = register(moduleId);
+  if ( accepted && settled ) {
+    try {
+      LicenseUI.startReminder();
+      if ( game.user?.isGM && !LicenseClient.instance.hasStoredCredentials ) LicenseUI.show();
+    }
+    catch ( error ) {
+      console.error(`${MODULE_TITLE} | Late registration of ${moduleId} failed`, error);
+    }
+  }
+  return accepted;
+}
+
 Hooks.once("init", () => {
   try {
     game.settings.register(MODULE_ID, SETTING, {
@@ -47,7 +73,7 @@ Hooks.once("init", () => {
     // Published in init so it exists before any module's `ready` hook runs.
     game.modules.get(MODULE_ID).api = Object.freeze({
       apiVersion: 2,
-      register,
+      register: registerModule,
       openLicenseCard,
       isLicensed: isWorldLicensed,
       hasVerdict,
@@ -80,11 +106,14 @@ Hooks.once("ready", async () => {
       // enough — it is the $3 case, and that GM has already connected.
       if ( !client.hasStoredCredentials && LicenseUI.hasTrialModules() ) LicenseUI.show();
     }
-    // Players only ever read the world's date; they never contact the server.
+    // Players only ever read the world's verdict; they never contact the server.
     LicenseUI.startReminder();
   }
   catch ( error ) {
     console.error(`${MODULE_TITLE} | Licence check failed`, error);
+  }
+  finally {
+    settled = true;
   }
 });
 

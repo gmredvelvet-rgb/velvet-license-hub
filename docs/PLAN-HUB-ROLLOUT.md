@@ -88,12 +88,13 @@ Ninguna exige nonce. Todas aceptarán el token del hub si lleva las features (D2
 
 | Módulo | Git | Notas |
 | --- | --- | --- |
-| `velvet-move` | sí | **22 cambios sin commitear** del usuario |
+| `velvet-move` | sí | limpio: el trabajo pendiente se commiteó (`4e3ebcb`) a petición del usuario |
 | `redvelvet-cooking-system` | sí, rama **`cociuna2`** | **31 cambios sin commitear** |
 | `action-bubbles` | sí | 5 sin commitear (incluye el port de hoy) |
 | `pf2e-statblock-parser` | sí | 4 sin commitear (incluye el port) |
-| `vnd-enhanced`, `isometric-asset-palette` | sí | 2 sin commitear cada uno |
-| `hopefinder-sheet`, `dnd-velvet-sheets` | sí | 1 sin commitear cada uno |
+| `vnd-enhanced` | sí | `docs/PAID-UPDATE-GATING.md` + `.patch` sin versionar: plan aparte (cerrar *actualizaciones* a no suscriptores con manifiestos por suscriptor). Compatible con el hub, sin implementar. No tocar |
+| `isometric-asset-palette` | sí | `.github/` y `docs/` sin versionar (docs incluye `SOFT-GATE.md`) |
+| `hopefinder-sheet`, `dnd-velvet-sheets` | sí | `module.json` **reescrito por el instalador de Foundry** (styles como objetos, `flags: {}`, `download` fijado a la versión, `&` → `&amp;`). No es trabajo del usuario pero tampoco se commitea: **preguntar** antes de la fase 8 |
 | `starfinderdashboard` | sí, rama **`master`** | limpio |
 | resto con git | sí, `main` | limpio |
 | `velvet-journals`, `quest-board`, `velvet-poker`, `tarokka`, `domatori`, `srg-deluxe`, `redvelvet-ai-map-forge`, `redvelvet-crafting-*` (3), `redvelvet-settlement`, `GMRedvelvet-stf2e-hacking`, `foundry-rolls-bridge` | **no** | `velvet-journals` y `quest-board` publican desde GitHub: el checkout vive en otra ruta. **Pregunta al usuario** dónde está cada repo y cómo distribuye los que no tienen GitHub (¿zip por Patreon?) |
@@ -202,7 +203,9 @@ hub falla en producción. Así que:
   token antiguo por credenciales del hub sin pasar por Patreon. Más backend y
   choreografía entre módulos, y el fingerprint antiguo depende del mundo, así que
   el canje falla justo en el caso que querría arreglar. Solo si A resulta molesta
-  en la práctica. **Confirmar A con el usuario antes de la fase 10.**
+  en la práctica.
+
+**Decidido (2026-09-11): opción A**, confirmada por el usuario.
 
 ### D8 — Contrato de la API v2
 
@@ -222,13 +225,17 @@ Los módulos que usen `hasVerdict`/`request` exigen `>= 2`.
 
 ### D9 — Helper común para los 13 módulos antiguos
 
-Un fichero `scripts/license/hub.js` (o `.mjs`, según el módulo) idéntico en todos:
+Un fichero `license-hub.js` (o `.mjs`, según el módulo), junto al cliente de licencia de
+cada módulo e idéntico en todos. **La copia canónica vive en `bridge/license-hub.js` de
+este repo**; `tests/bridge.mjs` falla si alguna copia difiere. Se llama `license-hub` y
+no `hub` porque `velvet-journals` ya tiene un `scripts/hub.js` propio. Resumen:
 
 ```js
 const HUB_ID = "velvet-license-hub";
 
-/** La API del hub (>= minVersion) o null. Un hub activo sin API cuenta como ausente. */
-export function licenseHub(minVersion = 2) {
+/** La API del hub (>= minVersion) o null. Un hub activo sin API cuenta como ausente.
+ *  1 basta para register(); hasVerdict() y request() piden 2. */
+export function licenseHub(minVersion = 1) {
   const hub = game.modules.get(HUB_ID);
   return (hub?.active && (hub.api?.apiVersion >= minVersion)) ? hub.api : null;
 }
@@ -329,7 +336,7 @@ salir antes de inicializar el cliente propio o mostrar su tarjeta; el
 | `velvet-journals` | `main.js` hooks `init`/`ready`/`updateSetting` (29, 110-126) |
 | `isometric-asset-palette` | `main.js` (77, 153-169) |
 | `directional-token-images` | `module.js` (48, 114-117) |
-| `velvet-move` | `main.js` (101, 116) y `registerLicenseMenu` — **repo sucio, ver R6** |
+| `velvet-move` | `main.js` (101, 116) y `registerLicenseMenu` |
 | `isometric-tokens-creator` | `main.js` (97, 111) y `registerLicenseMenu` |
 | `pf2e-velvet-sheet` | `velvet-sheet.mjs` (2810-2825); el panel "Connect to unlock" (1102-1139) debe llamar a `hub.openLicenseCard()` si hay hub |
 | `dnd-velvet-sheets` | `aaa-sheet.mjs` (947-984) + su hook `ready`; igual que el anterior |
@@ -428,6 +435,20 @@ Hoy cubren H1, H2, H7, H8, H9, H10 y `request()`. Al integrar cada módulo
 Backend: `verify-tiers.js` y `verify-security.js` en verde; `/oauth/start` y un
 `GET /shops/data` con token del hub en `wrangler dev --local`.
 
+### Verificación de las fases 4-6
+
+- `bash tests/run.sh` (hub): integración, persistencia, `request()`, registro tardío y
+  `tests/bridge.mjs` — la regla D3 contra el hub real en H1-H5 y H10, más la
+  comprobación de que las 13 copias del puente son idénticas.
+- Verificador estático (scratchpad de la sesión, `verify_integration.py`; recrearlo si
+  falta): en los 13 módulos, puente presente, todo uso del puente importado, registro en
+  el hub, menú de licencia propio condicionado a `hubActive()`, **cero lecturas directas
+  de `worldLicensed` en los hard gates** (salvo dentro de la cadena del cliente antiguo,
+  que solo corre sin hub) y sintaxis de cada fichero.
+- Hub: `register()` tardío (un módulo que hace `await` antes de registrarse, como
+  `isometric-tokens-creator`) re-evalúa tarjeta y recordatorio; antes se quedaba sin
+  recordatorio para siempre.
+
 ## 7. Riesgos y vuelta atrás
 
 | Riesgo | Mitigación / vuelta atrás |
@@ -443,13 +464,13 @@ Backend: `verify-tiers.js` y `verify-security.js` en verde; `/oauth/start` y un
 
 | Fase | Estado | Fecha | Notas |
 | --- | --- | --- | --- |
-| 0 Preparación | pendiente | | |
+| 0 Preparación | **hecho** | 2026-09-11 | rama `feat/license-hub` en los 12 repos git; `velvet-journals` sin git, respaldado en el scratchpad de la sesión |
 | 1 Backend | **hecho** (falta deploy ⛔) | 2026-09-11 | `hubFeatures()` en `src/patreon.js`; hub en `MOBILE_TIER_MODULES`; `verify-tiers` con 11 casos del hub, en verde |
 | 2 Hub 2.0.0 | **hecho** | 2026-09-11 | `worldLicence`, API v2, tarjeta parcial para $3, `request()` con validación de ruta, workflow de release. Arneses: 7 escenarios de integración + persistencia + 10 de `request()`, en verde |
 | 3 Publicar hub ⛔ | pendiente | | |
-| 4 Módulos soft | pendiente | | |
-| 5 Hard gates | pendiente | | |
-| 6 Contenido del worker | pendiente | | |
+| 4 Módulos soft | **hecho** | 2026-09-11 | 7 módulos + la parte soft de `vnd-enhanced`. Los overlays con candado de `pf2e-velvet-sheet` y `dnd-velvet-sheets` son código muerto (nadie los llama): fase 11 |
+| 5 Hard gates | **hecho** | 2026-09-11 | los 4. `sf2e-cyber-sheet` ponía su flag a `false` en `setup` si el navegador no validaba: con hub ya no lo toca (pisaría el flag que D3 necesita) |
+| 6 Contenido del worker | **hecho** | 2026-09-11 | `dnd-shops` no tiene flag de mundo: su D3 es "el cliente propio hasta que el hub hable". `vnd-enhanced` IA vía `hub.request`; `request()` admite ahora query plana (`/ai/history?limit=20`). `VNEnhanced.license`/`hasFeature` sin cambios: fase 11 |
 | 7 Los 15 del port | pendiente | | sin cambios de código |
 | 8 Dependencia obligatoria | pendiente | | |
 | 9 Verificación integral | pendiente | | |

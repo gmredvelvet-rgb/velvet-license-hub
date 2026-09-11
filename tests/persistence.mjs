@@ -138,6 +138,7 @@ if ( scenario === "request" || scenario === "request-nocreds" ) {
     calls.push({ path, method: init.method, auth: init.headers.Authorization ?? null, body: init.body ?? null });
     const json = (status, data) => new Response(JSON.stringify(data), { status });
     if ( path === "/shops/data" ) return json(200, { categories: ["armas"] });
+    if ( path === "/ai/history" ) return json(200, { items: [], limit: new URL(url).searchParams.get("limit") });
     if ( path === "/ai/tokens" ) {
       aiAttempts += 1;
       return aiAttempts === 1 ? json(401, { error: "Invalid token", code: "INVALID_TOKEN" }) : json(200, { tokens: 7 });
@@ -169,7 +170,13 @@ if ( scenario === "request" || scenario === "request-nocreds" ) {
     const postCall = calls.at(-1);
     checks.push(["POST lleva el cuerpo tal cual, sin nonce", post.ok !== undefined && postCall.body === '{"a":1}']);
 
+    const q = await attempt(() => client.request("GET", "/ai/history?limit=20"));
+    const qCall = calls.at(-1);
+    checks.push(["ruta con query plana (AI Studio): aceptada", q.ok?.limit === "20" && qCall.path === "/ai/history"]);
+
     const n = calls.length;
+    const evilQ = await attempt(() => client.request("GET", "/ai/history?x=@evil.example"));
+    checks.push(["query con @: rechazada sin red", evilQ.code === "BAD_REQUEST" && calls.length === n]);
     const evil = await attempt(() => client.request("GET", "@evil.example/steal"));
     const evil2 = await attempt(() => client.request("GET", "//evil.example/steal"));
     const evil3 = await attempt(() => client.request("DELETE", "/shops/data"));

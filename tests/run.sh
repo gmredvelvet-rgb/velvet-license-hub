@@ -34,6 +34,7 @@ expect hub-trial     '"cards":["velvet-license-hub-card"]'
 expect hub-licensed  '"cards":[]'
 expect hub-mobile    '"partial":true,"listsMobile":false'
 expect hub-empty     '"cards":[]'
+expect hub-late      '"cards":["velvet-license-hub-card"],"menus":["velvet-license-hub.licenseMenu"],"network":0,"hubLists":["tarokka"]'
 expect no-hub        '"cards":["tarokka-license-card","action-bubbles-license-card"]'
 expect hub-broken    '"cards":["tarokka-license-card","action-bubbles-license-card"]'
 expect player        '"cards":[],'
@@ -42,6 +43,9 @@ for s in second-world request request-nocreds; do
   echo "== $s"
   node "$HERE/persistence.mjs" "$WORK/hub" "$s" 2>&1 | quiet || fails=$((fails+1))
 done
+
+echo "== puente de los modulos antiguos (regla de transicion)"
+node "$HERE/bridge.mjs" 2>&1 | quiet || fails=$((fails+1))
 
 echo "== fingerprint entre mundos"
 a=$(node "$HERE/persistence.mjs" "$WORK/hub" fingerprint mundo-a 2>/dev/null)

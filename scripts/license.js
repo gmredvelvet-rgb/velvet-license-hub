@@ -280,8 +280,9 @@ export default class LicenseClient {
     if ( !["GET", "POST"].includes(method) ) throw new LicenseError(`Unsupported method ${method}`, "BAD_REQUEST");
     // The path is appended to API_BASE, so anything but a plain path could turn
     // the URL into another host — "@evil.example/x" reads as userinfo — and
-    // carry the bearer token there. Plain segments only.
-    if ( (typeof path !== "string") || !/^\/[A-Za-z0-9_\-/]+$/.test(path) ) {
+    // carry the bearer token there. Plain segments, and an optional query of
+    // plain pairs (AI Studio pages its history with `?limit=20`).
+    if ( (typeof path !== "string") || !/^\/[A-Za-z0-9_\-/]+(\?[A-Za-z0-9_\-=&.]*)?$/.test(path) ) {
       throw new LicenseError("Invalid licence server path", "BAD_REQUEST");
     }
     if ( !game.user?.isGM ) throw new LicenseError("Only the GM's browser holds licence credentials", "NO_CREDENTIALS");

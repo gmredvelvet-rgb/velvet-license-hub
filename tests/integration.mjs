@@ -4,7 +4,7 @@
  *
  *   node integration.mjs <escenario>
  *
- * Escenarios: hub-trial, hub-licensed, hub-mobile, hub-empty, no-hub, hub-broken, player
+ * Escenarios: hub-trial, hub-licensed, hub-mobile, hub-empty, hub-late, no-hub, hub-broken, player
  */
 import { pathToFileURL } from "node:url";
 
@@ -42,14 +42,16 @@ const settings = {
 
 // ── Módulos ──────────────────────────────────────────────────────────────────
 const hubActive = scenario !== "no-hub";
-const covered = scenario === "hub-empty" ? [] : COVERED;
+// hub-late: tarokka esta activo pero no carga su boot; se registra a mano tarde.
+const covered = ["hub-empty", "hub-late"].includes(scenario) ? [] : COVERED;
 const modules = new Map([
   ["velvet-license-hub", { id: "velvet-license-hub", title: "Velvet License Hub", active: hubActive }],
   // Aun no registra por si mismo (fase 5 del plan): el escenario hub-mobile lo
   // registra a mano para tener un modulo cubierto y otros en prueba.
   ["velvet-mobile", { id: "velvet-mobile", title: "Velvet Mobile", active: scenario === "hub-mobile" }]
 ]);
-for ( const id of COVERED ) modules.set(id, { id, title: id === "tarokka" ? "Tarokka" : "Action Bubbles", active: covered.includes(id) });
+for ( const id of COVERED ) modules.set(id, { id, title: id === "tarokka" ? "Tarokka" : "Action Bubbles",
+  active: covered.includes(id) || (scenario === "hub-late" && id === "tarokka") });
 
 globalThis.game = {
   view: "game",
@@ -108,6 +110,9 @@ if ( hubActive ) await load("velvet-license-hub/scripts/main.js");
 for ( const id of covered ) await load(`${id}/scripts/license/boot.js`);
 
 if ( scenario === "hub-mobile" ) Hooks.once("ready", () => game.modules.get("velvet-license-hub").api.register("velvet-mobile"));
+// Un modulo que espera algo en su ready antes de registrarse (isometric-tokens-creator
+// hace `await BaseLibrary.load()`): llega despues de que el hub haya decidido.
+if ( scenario === "hub-late" ) Hooks.once("ready", () => setTimeout(() => game.modules.get("velvet-license-hub").api.register("tarokka"), 100));
 Hooks.callAll("init");
 if ( scenario === "hub-broken" ) delete modules.get("velvet-license-hub").api;
 Hooks.callAll("ready");
@@ -121,7 +126,7 @@ const report = {
   cards,
   menus,
   network: network.length,
-  hubLists: hubCard ? covered.filter(id => hubCard.innerHTML.includes(modules.get(id).title)) : [],
+  hubLists: hubCard ? COVERED.filter(id => hubCard.innerHTML.includes(modules.get(id).title)) : [],
   hubCardKind: hubCard?.className ?? null,
   partial: hubCard ? hubCard.innerHTML.includes("TrialPartial") : null,
   listsMobile: hubCard ? hubCard.innerHTML.includes("Velvet Mobile") : null,

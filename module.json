@@ -1,0 +1,35 @@
+{
+  "id": "velvet-license-hub",
+  "title": "Velvet License Hub",
+  "description": "Una sola conexión de Patreon para todos los módulos de GM RedVelvet. Con el hub activo, los módulos compatibles dejan de pedir la licencia cada uno por su cuenta: se valida una vez, persiste entre mundos y se renueva sola. Sin licencia, todo sigue funcionando en prueba gratuita.",
+  "version": "1.0.0",
+  "authors": [
+    {
+      "name": "GM RedVelvet",
+      "url": "https://patreon.com/gmredvelvet"
+    }
+  ],
+  "url": "https://patreon.com/gmredvelvet",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/license.css"
+  ],
+  "languages": [
+    {
+      "lang": "es",
+      "name": "Español",
+      "path": "lang/es.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ]
+}

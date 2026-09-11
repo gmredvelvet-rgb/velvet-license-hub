@@ -1,0 +1,7 @@
+# OS / editor
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+*.zip
+*.code-workspace

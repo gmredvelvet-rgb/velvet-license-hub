@@ -1,0 +1,36 @@
+{
+  "velvet-license-hub": {
+    "Settings": {
+      "License": {
+        "Name": "Patreon licence",
+        "Label": "Manage licence",
+        "Hint": "One Patreon connection activates every GM RedVelvet module that uses the hub, in all your worlds. GM only: every feature works the same with or without a licence."
+      }
+    },
+    "License": {
+      "TrialBadge": "Free trial",
+      "TrialIntro": "These modules are running on the free trial, with every feature available:",
+      "TrialPitch": "Connect your Patreon once and all of them are activated together, in all your worlds.",
+      "TrialIntroPlayer": "Your GM is running these modules on the free trial:",
+      "TrialPlayerNote": "Nothing for you to do: the table has every feature available.",
+      "NoModules": "No hub-compatible module is active in this world.",
+      "Connect": "Connect with Patreon",
+      "Opening": "Opening Patreon…",
+      "HaveCode": "I have a code",
+      "Later": "Later",
+      "Close": "Close",
+      "Cancelled": "Authorisation cancelled. If the popup did not open, use the “I have a code” option.",
+      "Connected": "Connected as a {tier} subscriber. All your hub modules are now activated.",
+      "CodeTitle": "Enter code",
+      "CodeHint": "Paste the code shown after connecting your Patreon account.",
+      "Activate": "Activate",
+      "StatusActive": "Licence active: {tier} subscriber. It covers these modules:",
+      "StatusTrusted": "Licence verified. It covers these modules:",
+      "ValidUntil": "Valid until {date}. It renews itself while the subscription stays active: you will not be asked again.",
+      "Released": "Installation slot released.",
+      "Release": "Release installation",
+      "ReleaseHint": "Release the slot if you are moving your subscription to another browser or computer.",
+      "ReleaseConfirm": "Release this installation? The modules keep working, but the free-trial reminder returns in this world until you connect again."
+    }
+  }
+}

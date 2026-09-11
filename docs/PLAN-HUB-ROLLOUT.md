@@ -466,16 +466,16 @@ Backend: `verify-tiers.js` y `verify-security.js` en verde; `/oauth/start` y un
 | Fase | Estado | Fecha | Notas |
 | --- | --- | --- | --- |
 | 0 Preparación | **hecho** | 2026-09-11 | rama `feat/license-hub` en los 12 repos git; `velvet-journals` sin git, respaldado en el scratchpad de la sesión |
-| 1 Backend | **hecho** (falta deploy ⛔) | 2026-09-11 | `hubFeatures()` en `src/patreon.js`; hub en `MOBILE_TIER_MODULES`; `verify-tiers` con 11 casos del hub, en verde |
+| 1 Backend | **en producción** | 2026-09-11 | desplegado (versión `e5d95ca5`) y en GitHub (`dc18e9a`). Verificado: `/oauth/start` del hub y de módulos nuevos responde; un id desconocido sigue en `UNKNOWN_MODULE` |
 | 2 Hub 2.0.0 | **hecho** | 2026-09-11 | `worldLicence`, API v2, tarjeta parcial para $3, `request()` con validación de ruta, workflow de release. Arneses: 7 escenarios de integración + persistencia + 10 de `request()`, en verde |
-| 3 Publicar hub ⛔ | pendiente | | |
+| 3 Publicar hub ⛔ | **en producción** | 2026-09-11 | repo público `gmredvelvet-rgb/velvet-license-hub`, release v2.0.0 con `tools/release.sh` (el token no tiene scope `workflow`: se sacó `.github` del historial, que nunca se había publicado) |
 | 4 Módulos soft | **hecho** | 2026-09-11 | 7 módulos + la parte soft de `vnd-enhanced`. Los overlays con candado de `pf2e-velvet-sheet` y `dnd-velvet-sheets` son código muerto (nadie los llama): fase 11 |
 | 5 Hard gates | **hecho** | 2026-09-11 | los 4. `sf2e-cyber-sheet` ponía su flag a `false` en `setup` si el navegador no validaba: con hub ya no lo toca (pisaría el flag que D3 necesita) |
 | 6 Contenido del worker | **hecho** | 2026-09-11 | `dnd-shops` no tiene flag de mundo: su D3 es "el cliente propio hasta que el hub hable". `vnd-enhanced` IA vía `hub.request`; `request()` admite ahora query plana (`/ai/history?limit=20`). `VNEnhanced.license`/`hasFeature` sin cambios: fase 11 |
 | 7 Los 15 del port | **hecho** | 2026-09-11 | sin cambios de código: usan `register()` de la API v1, que v2 mantiene (escenarios de `tests/integration.mjs`) |
-| 8 Dependencia obligatoria | pendiente | | |
-| 9 Verificación integral | pendiente | | |
-| 10 Releases ⛔ | pendiente | | |
+| 8 Dependencia obligatoria | **hecho** | 2026-09-11 | `requires` del hub en 27 módulos: los 13 publicados, `velvet-journals`, `action-bubbles` y 12 sin repo público (en local). **`tarokka` excluido**: su README promete que es gratis y sin licencia, y está en el listado oficial; su copia local se devolvió a la release v1.0.3 publicada |
+| 9 Verificación integral | **hecho, salvo Foundry real** | 2026-09-11 | cada manifiesto publicado sirve la versión nueva con el hub, y cada zip de descarga responde 200. Pendiente: instalar en un Foundry real (usuario) |
+| 10 Releases ⛔ | **en producción** | 2026-09-11 | vnd-enhanced 1.7.0 · dnd-shops 0.7.0 · sf2e-cyber-sheet 1.3.0 · starfinderdashboard 1.1.0 · hopefinder-sheet 1.2.0 · pf2e-velvet-sheet 1.4.0 · dnd-velvet-sheets 1.4.0 · velvet-mobile 0.21.0 · directional-token-images 1.2.0 · velvet-move 1.1.0 · isometric-tokens-creator 1.1.0 · isometric-asset-palette 0.5.0 · pf2e-statblock-parser 0.2.0 · velvet-journals 3.5.0 (incluye la API de alta de misiones que estaba sin subir) · action-bubbles 1.5.0 (repo privado) |
 | 11 Limpieza | pendiente | | tras una release estable |
 
 **Commits de las fases 4-6** (rama `feat/license-hub`, sin push): `isometric-asset-palette`
@@ -485,10 +485,26 @@ ae7244c · `velvet-mobile` 0c89fdc · `hopefinder-sheet` 14e5eac · `sf2e-cyber-
 29149d2 · `starfinderdashboard` d1a6a8f · `dnd-shops` 123a024 · `vnd-enhanced` 0813b94.
 `velvet-journals` no tiene git: editado en su sitio, copia previa en el scratchpad.
 
-**Siguiente: fase 8, que espera a las paradas 1 y 3.** Estas carpetas son la
+**(Histórico) La fase 8 esperó a las paradas 1 y 3.** Estas carpetas son la
 instalación de Foundry del usuario: añadir `requires` en local obliga ya a activar el
 hub en sus mundos. Con el backend de producción sin la fase 1, el token del hub no trae
 cobertura (`module:*`), el hub nunca publica veredicto, y todos los módulos quedarían
 en prueba gratuita bajo la tarjeta del hub — sin perder acceso (D3), pero con aviso
 constante. Además, `hopefinder-sheet` y `dnd-velvet-sheets` tienen el `module.json`
 reescrito por Foundry: decidir con el usuario antes de tocarlo.
+
+### Fuera de producción, y por qué
+
+- **`tarokka`**: su README dice *"This module is free… it contains no licence check of
+  any kind"* y está en el listado oficial de Foundry. Llevarle el hub rompería esa
+  promesa pública. Sigue registrado en el backend (inofensivo: ningún cliente lo usa).
+- **`redvelvet-cooking-system`**: trabajo del usuario a medias en la rama `cociuna2`,
+  parte ya en el índice. Un commit arrastraría ese trabajo. El port y el `requires`
+  están en disco sin commitear; el repo es privado.
+- **12 módulos sin repo público** (`quest-board` —cuyo manifiesto apunta a un repo
+  que no existe—, `velvet-poker`, `domatori`, `srg-deluxe`, `redvelvet-ai-map-forge`,
+  los tres `redvelvet-crafting-*`, `redvelvet-settlement`, `GMRedvelvet-stf2e-hacking`,
+  `foundry-rolls-bridge`, y el propio `cooking`): código y `requires` listos en local;
+  no hay canal de distribución conocido desde aquí.
+- **`action-bubbles`**: publicada (1.5.0), pero el repo es privado, así que los usuarios
+  no pueden instalarla por manifiesto. Así estaba ya antes.

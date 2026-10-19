@@ -2,6 +2,12 @@
 
 Una sola conexión de Patreon para todos los módulos de GM RedVelvet.
 
+En **Velvet Overlay 1.0.2 o posterior**, pulsa **Conectar con Patreon** para abrir
+tu navegador habitual. Conecta allí tu cuenta, copia el código de la página final
+y pégalo en la ventana del Hub que queda abierta en el overlay. También puedes
+cerrar esa ventana y volver a **Tengo un código**. En un navegador convencional
+se conserva la activación automática mediante ventana emergente.
+
 Sin el hub, cada módulo lleva su propio *soft gate*: su propia tarjeta de prueba
 gratuita, su propio botón de Patreon, su propia activación. Con quince módulos en
 un mundo, son quince conexiones. Con el hub activo, los módulos compatibles le

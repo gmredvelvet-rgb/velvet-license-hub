@@ -2,7 +2,7 @@
   "id": "velvet-license-hub",
   "title": "Velvet License Hub",
   "description": "Una sola conexión de Patreon para todos los módulos de GM RedVelvet. Con el hub activo, los módulos compatibles dejan de pedir la licencia cada uno por su cuenta: se valida una vez, persiste entre mundos y se renueva sola. Sin licencia, todo sigue funcionando en prueba gratuita.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "authors": [
     {
       "name": "GM RedVelvet",

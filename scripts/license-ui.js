@@ -254,6 +254,10 @@ export default class LicenseUI {
 
     try {
       const connected = await LicenseClient.instance.startOAuth();
+      if ( connected === "external" ) {
+        ui.notifications?.info(`${MODULE_TITLE}: ${L("BrowserOpened")}`);
+        return await LicenseUI.#enterCode(card);
+      }
       if ( connected ) {
         LicenseUI.stopReminder();
         return void card.remove();

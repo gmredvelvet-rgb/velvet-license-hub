@@ -16,6 +16,8 @@
       "NoModules": "No hub-compatible module is active in this world.",
       "Connect": "Connect with Patreon",
       "Opening": "Opening Patreon…",
+      "BrowserOpened": "Patreon opened in your browser. Connect your account, copy the code and paste it into this window.",
+      "BrowserFailed": "Your browser could not be opened. Try Connect with Patreon again.",
       "HaveCode": "I have a code",
       "Later": "Later",
       "Close": "Close",

@@ -307,13 +307,22 @@ export default class LicenseClient {
 
   /**
    * Open the Patreon consent popup and activate on success.
-   * @returns {Promise<boolean>} False when the user closed the popup.
+   * @returns {Promise<boolean|"external">} External means the GM must paste the browser's code.
    */
   async startOAuth() {
     const { url } = await this.#apiCall("/oauth/start", {
       origin: globalThis.location.origin,
       moduleId: LICENSE_MODULE_ID
     });
+    // The desktop overlay opens the system browser, where the GM already has
+    // their Patreon session. It cannot receive this window's postMessage.
+    const desktop = globalThis.velvetOverlay;
+    if ( typeof desktop?.openLicenseSignIn === "function" ) {
+      if ( await desktop.openLicenseSignIn(url) !== true ) {
+        throw new LicenseError(L("BrowserFailed"), "BROWSER_OPEN_FAILED");
+      }
+      return "external";
+    }
     const popup = window.open(url, "vnd-patreon-auth", "width=600,height=700,popup=yes");
     // A blocked popup returns null. Without this the close-poll below would
     // never fire (`popup?.closed` is undefined, never true) and the promise

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1
+
+- En Velvet Overlay 1.0.2 o posterior, «Conectar con Patreon» abre el navegador habitual y muestra el diálogo para pegar el código al regresar.
+- Cancelar, introducir un código inválido o no poder abrir el navegador permite reintentar sin dejar el botón bloqueado.
+- Se mantiene la conexión automática mediante ventana emergente en navegadores convencionales y el soft gate sin restricciones de funciones.
+- Verificado con el cliente y la tarjeta reales en Electron; las respuestas de Patreon y Foundry se simulan sin iniciar sesión ni realizar pagos.
+
 ## 2.0.0
 
 - **Cobertura por módulo.** La licencia del mundo pasa a ser `worldLicence =
